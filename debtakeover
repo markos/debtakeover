@@ -91,6 +91,7 @@ Options:
     --profile=string	Installation profile (default "$DEFAULT_PROFILE")
     --suite=string	Debian suite (default "$DEFAULT_SUITE")
     --mirror=url	Debian mirror (default "$DEFAULT_MIRROR")
+    --arch=arch		Debian arch (default "$DEFAULT_ARCH")
     --tarball=file	Debian base tarball
     --debootstrap=path	Debootstrap compatible binary (default "$DEFAULT_DEBOOTSTRAP")
     --debootstrap-args=string
@@ -138,7 +139,7 @@ check_needed()
   if [ -s "$DEBIAN_TARBALL" ]; then
     local NEWPATH=$PATH
   else
-    local DEBOOTSTRAP_NEEDED="$DEBOOTSTRAP wget ar MAKEDEV"
+    local DEBOOTSTRAP_NEEDED="$DEBOOTSTRAP wget ar"
     # MAKEDEV may be only on /dev
     local NEWPATH=$PATH:/dev
   fi
@@ -282,6 +283,7 @@ debian_tarball_build()
 
   msg "-> Debootstrapping"
   $DEBOOTSTRAP $DEBOOTSTRAP_ARGS \
+    --arch="$DEBIAN_ARCH" \
     --include="$DEBOOTSTRAP_INCLUDES" \
     --exclude="$DEBOOTSTRAP_EXCLUDES" \
         $DEBIAN_VERSION $DEBIAN_DIR $DEBIAN_MIRROR/debian 2>&1 | logpipe
@@ -446,13 +448,13 @@ debian_configure()
   update-passwd
 
   ## FIXME: handle udev
-  if [ ! -e /dev/.devfsd ]; then
-    msg "-> Updating device nodes"
-    cd /dev
-    ln -sf /sbin/MAKEDEV
-    ./MAKEDEV update || true
-    cd -
-  fi
+  #if [ ! -e /dev/.devfsd ]; then
+  #  msg "-> Updating device nodes"
+  #  cd /dev
+  #  ln -sf /sbin/MAKEDEV
+  #  ./MAKEDEV update || true
+  #  cd -
+  #fi
 
   msg "-> Disabling unneeded network services"
   update-inetd --multi --disable discard,daytime,time
@@ -539,6 +541,7 @@ PROGRAM=debtakeover
 VERSION=0.8
 BUGS_ADDRESS="Guillem Jover <guillem@debian.org>"
 
+DEFAULT_ARCH=amd64
 DEFAULT_MIRROR=http://httpredir.debian.org
 DEFAULT_MIRROR_SECURITY=http://security.debian.org
 DEFAULT_SUITE=jessie
@@ -561,6 +564,9 @@ for arg do
       ;;
     --mirror=*)
       MIRROR=$arg_value
+      ;;
+    --arch=*)
+      ARCH=$arg_value
       ;;
     --suite=*)
       SUITE=$arg_value
@@ -627,6 +633,7 @@ DISTRO=unknown
 DISTRO_MIXED=no
 NETWORK_TYPE=none
 
+DEBIAN_ARCH=${ARCH:-$DEFAULT_ARCH}
 DEBIAN_MIRROR=${MIRROR:-$DEFAULT_MIRROR}
 DEBIAN_MIRROR_SECURITY=${MIRROR_SECURITY:-$DEFAULT_MIRROR_SECURITY}
 DEBIAN_VERSION=${SUITE:-$DEFAULT_SUITE}
@@ -640,7 +647,7 @@ DEBOOTSTRAP=${USER_DEBOOTSTRAP:-$DEFAULT_DEBOOTSTRAP}
 DEBOOTSTRAP_ARGS=$USER_DEBOOTSTRAP_ARGS
 DEBOOTSTRAP_CHECK_DIRS="/etc/apt /bin /sbin /dev /var/lib/dpkg/info \
 	/var/lib/apt/lists /var/cache/apt"
-DEBOOTSTRAP_INCLUDES="ssh,grub,xz-utils,bzip2"
+DEBOOTSTRAP_INCLUDES="ssh,xz-utils,bzip2"
 if [ "$DEBTAKEOVER_PROFILE" = "colo" ]; then
   DEBOOTSTRAP_EXCLUDES="setserial,fdutils,ipchains,pcmcia-cs,ppp,pppconfig,\
 pppoe,pppoeconf"
